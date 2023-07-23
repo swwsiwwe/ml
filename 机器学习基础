@@ -1,0 +1,681 @@
+# 机器学习基础
+
+## 监督学习
+
+数据集给了输入和输出，从被给的正确答案中进行学习
+
+|               回归               | 分类     |
+| :------------------------------: | -------- |
+| 在无限多可能的输出中预测一个数字 | 预测类别 |
+
+### 训练集表示
+
+| x    | y    |
+| ---- | ---- |
+| 2104 | 400  |
+| 1416 | 232  |
+| 1534 | 315  |
+| ...  | ...  |
+
+* x  称为输入变量/输入特征
+* y 称为输出变量/输出目标
+* m称为训练样本的总数 (若表格30行则m=30)
+* (x,y) 表示单个训练实例   (2104,400)
+* 在x,y右上角标记  "(i)"  表示第i个训练示例
+
+> x  ->   f   -> y-hat
+>
+> x为输入特征   f为模型  y-hat 为预测值
+>
+> model: f(x) = wx + b   w,b为模型的参数
+
+### 线性回归
+
+#### 代价函数（损失函数）
+
+线性回归中可以用平均方差代价函数
+
+> j(w,b) = 1/(2*m)  *  Σ(y-hat - y)^2
+>
+> 这里分母的2是为了方便计算
+
+线性回归  找到w，b使得j最小
+
+#### 梯度下降
+
+像下山一样，选择一个方向到达山底(选择w,b，使j变得最小)
+
+>以线性回归为例，梯度下降算法为：
+>
+>temp_w = w - α*(j(w,b)对w求偏导)
+>
+>temp_b = b - α*(j(w,b)对b求偏导)
+>
+>w = temp_w
+>
+>b = temp_b
+>
+>此处的w，b**同时下降**
+>
+>---
+>
+>这个是错误的：
+>
+>temp_w = w - α*(j(w,b)对w求偏导)
+>
+>w = temp_w
+>
+>temp_b = b - α*(j(w,b)对b求偏导)
+>
+>b = temp_b
+
+##### 梯度下降偏导数的含义
+
+偏导数决定梯度下降的方向
+
+假设j = 3*w^2
+
+当w取一个大于0的数时  temp_w = w - α*6\*正数  temp_w会变小
+
+当w取一个小于0的数时  temp_w = w - α*6\*负数  temp_w会变大
+
+当w逐渐向0逼近时，j逐渐变小，在w=0处取到极小值
+
+通过偏导找到j的极小值
+
+##### 梯度下降α的含义
+
+α为学习率  可以决定梯度下降算法的速度
+
+α过小 梯度算法会起作用，但是很慢
+
+α过大 j可能无法收敛，找不到极小值
+
+#### 代码
+
+* 基础知识
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def func():
+    # 创建x_train,y_train数组
+    x_train = np.array([1.0, 2.0])
+    y_train = np.array([300.0, 500.0])
+    print(f"x_train = {x_train}")
+    print(f"y_train = {y_train}")
+    
+    #获取数组长度
+    m1 = x_train.shape[0]
+    m2 = len(x_train)
+    print(f"Number of training examples is {m1}")
+    print(f"Number of training examples is {m2}")
+    
+    # 绘制图像
+    f_wb = compute_model_output(x_train, 200, 100)
+    show_pic(x_train, y_train, f_wb)
+
+
+# 绘制图像 
+def show_pic(x_train, y_train, f_wb):
+    plt.style.use("deeplearning.mplstyle")
+    # 绘制过散点的线
+    plt.plot(x_train, f_wb, c='b', label='Our prediction')
+    # 绘制图像数据点(散点)
+    plt.scatter(x_train, y_train, marker='x', c='r', label='Actual Values')
+    # 绘制图表名称
+    plt.title("Housing Prices")
+    # 绘制y轴名称
+    plt.ylabel('Price (in 1000s of dollars)')
+    # 绘制x轴名称
+    plt.xlabel('Size (1000 sqft)')
+    # 绘制图例
+    plt.legend()
+    # 图像展示
+    plt.show()
+
+
+# 计算f(x) = wx + b 中的f(x)
+def compute_model_output(x, w, b):
+    # 获取x的个数m
+    m = x.shape[0]
+    # 创建一个含m个数的数组，并初始化为0
+    f_wb = np.zeros(m)
+    # 计算f(x)
+    for i in range(m):
+        f_wb[i] = w*x[i] + b
+    return f_wb
+
+
+#运行
+if __name__ == '__main__':
+    func()
+```
+
+* 结果
+
+  > x_train = [1. 2.]
+  > y_train = [300. 500.]
+  > Number of training examples is 2
+  > Number of training examples is 2
+
+* 代价函数
+
+```python
+def compute_cost(x, y, w, b):
+    m = x.shape[0]
+    cnt = 0
+    for i in range(m):
+        f_wb = w*x[i] + b
+        cost = (f_wb - y[i]) ** 2
+        cnt = cnt + cost
+    return 1/(2 * m)*cnt
+```
+
+* 梯度下降算法
+
+```python
+# 计算j(w,b)对w,b的偏导数
+def compute_gradient(x, y, w, b):
+    m = x.shape[0]
+    dw = 0
+    db = 0
+    for i in range(m):
+        f_wb = w * x[i] + b
+        # 对w,b某一项求偏导 
+        # w_i' = [f(x_i) - y_i] * x_i
+        dw_i = (f_wb-y[i])*x[i]
+        # b_i' = [f(x_i) - y_i]
+        db_i = f_wb - y[i]
+        # 求和
+        dw += dw_i
+        db += db_i
+    dw = dw/m
+    db = db/m
+    return dw, db
+```
+
+```python
+# 梯度下降算法
+def gradient_descent(x, y, w_in, b_in, alpha, num_iters, cost_function, gradient_function):
+    # 存储每一次迭代时得出的代价值
+    j_history = []
+    # 存储每一次迭代得出的w和b的值
+    p_history = []
+    b = b_in
+    w = w_in
+    for i in range(num_iters):
+        dw_j, db_j = gradient_function(x, y, w, b)
+        b = b-alpha*db_j
+        w = w-alpha*dw_j
+        if i < 100000:
+            j_history.append(cost_function(x, y, w, b))
+            p_history.append([w, b])
+        # math.ceil向上求和
+        if i % math.ceil(num_iters/10) == 0:
+            print(f"Iteration {i:4}: Cost={j_history[-1]:0.2e}",
+                  f"dw_j:{dw_j:0.3e},db_j:{db_j:0.3e}",
+                  f"w:{w:0.3e},b:{b:0.5e}")
+    return w, b, j_history, p_history
+```
+
+* 测试
+
+```python
+def test():
+    # Load our data set
+    x_train = np.array([1.0, 2.0])  # features
+    y_train = np.array([300.0, 500.0])  # target value
+    # initialize parameters
+    w_init = 0
+    b_init = 0
+    # some gradient descent settings
+    iterations = 10000
+    tmp_alpha = 1e-2
+    # run gradient descent
+    w_final, b_final, J_hist, p_hist = gradient_descent(x_train, y_train, w_init, b_init, tmp_alpha,
+                                                                iterations, compute_cost,
+                                                                compute_gradient)
+    print(f"(w,b) found by gradient descent: ({w_final:8.4f},{b_final:8.4f})")
+    # plot cost versus iteration
+    fig, (ax1, ax2) = plt.subplots(1, 2, constrained_layout=True, figsize=(12, 4))
+    ax1.plot(J_hist[:100])
+    ax2.plot(1000 + np.arange(len(J_hist[1000:])), J_hist[1000:])
+    ax1.set_title("Cost vs. iteration(start)")
+    ax2.set_title("Cost vs. iteration (end)")
+    ax1.set_ylabel('Cost')
+    ax2.set_ylabel('Cost')
+    ax1.set_xlabel('iteration step')
+    ax2.set_xlabel('iteration step')
+    plt.show()
+```
+
+>运行结果
+>
+>Iteration    0: Cost=7.93e+04 dw_j:-6.500e+02,db_j:-4.000e+02 w:6.500e+00,b:4.00000e+00
+>Iteration 1000: Cost=3.41e+00 dw_j:-3.712e-01,db_j:6.007e-01 w:1.949e+02,b:1.08228e+02
+>Iteration 2000: Cost=7.93e-01 dw_j:-1.789e-01,db_j:2.895e-01 w:1.975e+02,b:1.03966e+02
+>Iteration 3000: Cost=1.84e-01 dw_j:-8.625e-02,db_j:1.396e-01 w:1.988e+02,b:1.01912e+02
+>Iteration 4000: Cost=4.28e-02 dw_j:-4.158e-02,db_j:6.727e-02 w:1.994e+02,b:1.00922e+02
+>Iteration 5000: Cost=9.95e-03 dw_j:-2.004e-02,db_j:3.243e-02 w:1.997e+02,b:1.00444e+02
+>Iteration 6000: Cost=2.31e-03 dw_j:-9.660e-03,db_j:1.563e-02 w:1.999e+02,b:1.00214e+02
+>Iteration 7000: Cost=5.37e-04 dw_j:-4.657e-03,db_j:7.535e-03 w:1.999e+02,b:1.00103e+02
+>Iteration 8000: Cost=1.25e-04 dw_j:-2.245e-03,db_j:3.632e-03 w:2.000e+02,b:1.00050e+02
+>Iteration 9000: Cost=2.90e-05 dw_j:-1.082e-03,db_j:1.751e-03 w:2.000e+02,b:1.00024e+02
+>(w,b) found by gradient descent: (199.9929,100.0116)
+>
+>Process finished with exit code 0
+
+#### 多元线性回归回归
+
+* numpy
+
+```python
+a = np.array([1,2,3])
+b = np,array([4,5,6])
+c = np.dot(a,b)
+```
+
+当有多个特征影响时，线性回归模型可以写为 f(x) = w1x1 + w2x2 + w3x3 +...+wnxn +b
+
+用向量写为f(**x**) = **w** \* **x** + b, **w** = [w1,w2,w3,...,wn], **x** = [x1,x2,x3,...,xn]
+
+```python
+# 代价函数
+def compute_cost(X, y, w, b):
+    cost = 0.0
+    m = X.shape[0]
+    for i in range(m):
+        f_wbi = np.dot(X[i], w) + b
+        cost += (f_wbi - y[i])**2
+    cost /= (m * 2)
+    return cost
+
+
+# 计算w,b偏导数
+def compute_gradient(X, y, w, b):
+    m, n = X.shape
+    dw_ = np.zeros((n, ))
+    db_ = 0
+    for i in range(m):
+        c = X[i]
+        f_w = np.dot(c, w) + b - y[i]
+        for j in range(n):
+            dw_[j] += f_w * X[i, j]
+        db_ += f_w
+    dw_ /= m
+    db_ /= m
+    return db_, dw_
+
+
+# 梯度下降算法
+def gradient_descent(X, y, w_in, b_in, cost_function, gradient_function, alpha, num_iters):
+    w_t = copy.deepcopy(w_in)
+    b_t = b_in
+    j_his = []
+    for i in range(num_iters):
+        db_, dw_ = gradient_function(X, y, w_t, b_t)
+        w_t -= alpha * dw_
+        b_t -= alpha * db_
+        if i < 100000:
+            j_his.append(cost_function(X, y, w_t, b_t))
+        if i % math.ceil(num_iters / 10) == 0:
+            print(f"Iteration {i:4d}: Cost {j_his[-1]:8.2f}   ")
+    return w_t, b_t, j_his
+
+
+# 测试
+def test():
+    X_train = np.array([[2104, 5, 1, 45], [1416, 3, 2, 40], [852, 2, 1, 35]])
+    y_train = np.array([460, 232, 178])
+    b_init = 785.1811367994083
+    w_init = np.array([ 0.39133535, 18.75376741, -53.36032453, -26.42131618])
+    initial_w = np.zeros_like(w_init)
+    initial_b = 0.
+    # some gradient descent settings
+    iterations = 10000
+    alpha = 8.3e-7
+    # run gradient descent
+    w_final, b_final, J_hist = gradient_descent(X_train, y_train, initial_w, initial_b,
+                                                compute_cost, compute_gradient,
+                                                alpha, iterations)
+    print(f"b,w found by gradient descent: {b_final:0.2f},{w_final} ")
+    m, _ = X_train.shape
+    for i in range(m):
+        print(f"prediction: {np.dot(X_train[i], w_final) + b_final:0.2f}, target value: {y_train[i]}")
+    # plot cost versus iteration
+    fig, (ax1, ax2) = plt.subplots(1, 2, constrained_layout=True, figsize=(12, 4))
+    ax1.plot(J_hist)
+    ax2.plot(100 + np.arange(len(J_hist[100:])), J_hist[100:])
+    ax1.set_title("Cost vs. iteration");
+    ax2.set_title("Cost vs. iteration (tail)")
+    ax1.set_ylabel('Cost');
+    ax2.set_ylabel('Cost')
+    ax1.set_xlabel('iteration step');
+    ax2.set_xlabel('iteration step')
+    plt.show()
+```
+
+* 特征缩放
+
+  对于x1,x2..xn 它们的范围不一定相同。
+
+  以房屋估价为例，假设f(x) = w1x1 + w2x2 + b   x1为房间数，范围[1,5]  x2为面积,范围[50,150]，对于不同范围，w的选择范围也不同。f(x)受到 w2的影响很大，收敛慢
+
+  1. 除以最大值   x1 / 5     x2 / 150
+  2. 均值归一化   得出xi平均值   (x - xi) / 范围区间长度
+  3. z-score标准化   (x - xi) / 标准差
+
+  ```python
+  # z-score方法进行特征缩放
+  # mu为平均值  sig为标准差
+  def zscore_normalize_features(X):
+      # axis=0时选中行，返回一个1行n列的向量，mean为求均值，axis=1时选中列，返回一个m行一列的向量
+      mu = np.mean(X, axis=0)
+      m = X.shape[0]
+      # np.std 返回标准差
+      sig = np.std(X, axis=0)
+      X_norm = (X - mu) / sig
+      return sig, mu, X_norm
+  
+  
+  # 将test()中的x_train 替换为 x_norm
+  ```
+
+* 特征工程和多项式回归
+
+  有时候需要拟合曲线，可以修改X使之适合曲线。通过组合原始特征得出新特性便是特征方程
+
+​		例如 f(x) = w1x1^2 + b ， 修改x_train `x_train = x_train**2`，
+
+​       通过特征工程和多项式函数，可以使之拟合曲线
+
+### 逻辑回归
+
+用y=wx+b线性回归可以得出许多的点，但是分类问题的结果只有0/1，直线不能很好的完成分类问题。
+
+逻辑回归是处理分类问题的一个方法
+
+sigmoid函数  y = 1/(1+e^(-z)) 
+
+> This can be accomplished by using a "sigmoid function" which maps all input values to values between 0 and 1
+
+`np.exp(x)表示e^x`
+
+一种逻辑回归模型为  y = sigmoid(wx + b)
+
+#### 决策边界
+
+f(x) = sigmoid(w1x1 + w2x2 + b) 的取值范围(0,1)  确定一个阈值t，使f(x) > t  预测y-hat为1  f(x)<t 预测y-hat为0
+
+从图像看，令t = 0.5， 当w1x1 + w2x2 + b > 0时f(x) > 0.5，当w1x1 + w2x2 + b<0时f(x) <0.5 。
+
+当w1x1 + w2x2 + b = 0时，这条直线所在的图像称为决策边界
+
+#### 代价函数（损失函数）
+
+通过数学相关知识，某一项代价可为
+
+loss(f,y) = -y * lg(f) - (1 - y) * lg(1 - f)
+
+当y = 1时  loss = -lg(f)。 若f  -> y 时  loss  -> 0，损失几乎没有，当 f -> 0时 loss  -> +∞ ,损失无穷大
+
+当y = 0时  loss = -lg(1 - f)。 若f  -> 1 时  loss  -> +∞，损失无穷大，当 f -> y时 loss  -> 0 ,损失几乎没有
+
+代价函数为 j = 1/m * Σ(loss(f,y))
+
+#### 梯度下降
+
+对上述代价函数求导得出
+
+对wj求偏导  1/m * Σ(f - y) * xj
+
+对b求偏导 1/m * Σ(f - y)
+
+#### 代码
+
+```python
+import copy, math
+import numpy as np
+
+
+# sigmoid函数
+def sigmoid(z):
+    return 1/(1 + np.exp(-z))
+
+
+# 代价函数
+def compute_cost_logistic(X, y, w, b):
+    m = X.shape[0]
+    cost = 0.0
+    for i in range(m):
+        z_i = np.dot(X[i], w) + b
+        f_wb_i = sigmoid(z_i)
+        cost += -y[i] * np.log(f_wb_i) - (1 - y[i]) * np.log(1 - f_wb_i)
+    cost /= m
+    return cost
+
+
+# 计算导数
+def compute_gradient_logistic(X, y, w, b):
+    m, n = X.shape
+    dw_ = np.zeros((n,))
+    db_ = 0
+    for i in range(m):
+        z_i = np.dot(X[i], w) + b
+        f_wb_i = sigmoid(z_i)
+        for j in range(n):
+            dw_[j] += (f_wb_i - y[i])*X[i, j]
+        db_ += (f_wb_i - y[i])
+    return db_/m, dw_/m
+
+
+# 梯度下降
+def gradient_descent(X, y, w_in, b_in, alpha, num_iters):
+    m, n = X.shape
+    j_his = []
+    w_t = copy.deepcopy(w_in)
+    b_t = b_in
+    for i in range(num_iters):
+        db, dw = compute_gradient_logistic(X, y, w_t, b_t)
+        w_t = w_t - alpha * dw
+        b_t = b_t - alpha * db
+        if i < 100000:
+            j_his.append(compute_cost_logistic(X, y, w_t, b_t))
+        if i % math.ceil(num_iters/10) == 0:
+            print(f"Iteration {i:4d}: Cost {j_his[-1]}   ")
+    return w_t, b_t, j_his
+
+
+# 测试
+def test():
+    X_train = np.array([[0.5, 1.5], [1, 1], [1.5, 0.5], [3, 0.5], [2, 2], [1, 2.5]])  # (m,n)
+    y_train = np.array([0, 0, 0, 1, 1, 1])
+    w_tmp = np.zeros_like(X_train[0])
+    b_tmp = 0.
+    alph = 0.1
+    iters = 10000
+    w_out, b_out, _ = gradient_descent(X_train, y_train, w_tmp, b_tmp, alph, iters)
+    print(f"\nupdated parameters: w:{w_out}, b:{b_out}")
+```
+
+#### 过拟合
+
+高偏差 欠拟合
+
+高方差 过拟合
+
+解决过拟合的方法
+
+* 选择更多的训练数据
+
+* 使用更少的特征
+
+* 正则化
+
+  j_new(w,b) = j(w,b) + λ/2mΣwj^2
+
+  temp_w = wj - α * j对wj偏导数 +  λ/m * wj
+
+```python
+# 线性回归代价函数
+def compute_cost_linear_reg(X, y, w, b, lambda_ = 1):
+    cost = 0.0
+    m = X.shape[0]
+    n = len(w)
+    for i in range(m):
+        f_wbi = np.dot(X[i], w) + b
+        cost += (f_wbi - y[i]) ** 2
+    cost /= (m * 2)
+    # λ/2mΣwj^2
+    reg_cost = 0.0
+    for j in range(n):
+        reg_cost += (w[j]**2)
+    reg_cost = reg_cost * (lambda_/(2*m))
+    return cost + reg_cost
+
+
+# 计算j(w,b)对w,b的偏导数
+def compute_gradient_linear_reg(X, y, w, b, lambda_):
+    m, n = X.shape
+    dw_ = np.zeros((n, ))
+    db_ = 0
+    for i in range(m):
+        c = X[i]
+        f_w = np.dot(c, w) + b - y[i]
+        for j in range(n):
+            dw_[j] += f_w * X[i, j]
+        db_ += f_w
+    dw_ /= m
+    db_ /= m
+    # λ/m * wj
+    for j in range(n):
+        dw_[j] += (lambda_/m) * w[j]
+    return db_, dw_
+```
+
+```python
+# 逻辑回归代价函数
+def compute_cost_logistic_reg(X, y, w, b, lambda_ = 1):
+    m,n = X.shape
+    cost = 0.0
+    for i in range(m):
+        z_i = np.dot(X[i], w) + b
+        f_wb_i = sigmoid(z_i)
+        cost += -y[i] * np.log(f_wb_i) - (1 - y[i]) * np.log(1 - f_wb_i)
+    cost /= m
+     #  λ/2mΣwj^2
+    reg = 0.0
+    for j in range(n):
+        reg += (w[j]**2)
+    reg = (lambda_/(2*m)) * reg
+    return cost + reg
+
+
+# 计算j(w,b)对w,b的偏导数
+def compute_gradient_logistic_reg(X, y, w, b, lambda_):
+    m, n = X.shape
+    dw_ = np.zeros((n,))
+    db_ = 0
+    for i in range(m):
+        z_i = np.dot(X[i], w) + b
+        f_wb_i = sigmoid(z_i)
+        for j in range(n):
+            dw_[j] += (f_wb_i - y[i]) * X[i, j]
+        db_ += (f_wb_i - y[i])
+    db_ /= m
+    dw_ /= m
+    # λ/m * wj
+    for j in range(n):
+        dw_[j] += (lambda_/m) * w[j]
+    return db_, dw_
+```
+
+## 无监督学习
+
+数据集中只给了输入，没有给输出，算法必须自己找到感兴趣的结果
+
+| 聚类                 | 异常检测     | 降维                                           |
+| -------------------- | ------------ | ---------------------------------------------- |
+| 相似的数据组合在一起 | 检测异常事件 | 尽可能不损失精度情况下将大数据集压缩为小数据集 |
+
+## Scikit-Learn
+
+```python
+# 线性回归
+import numpy as np
+from sklearn.linear_model import LinearRegression, SGDRegressor
+from sklearn.preprocessing import StandardScaler
+
+# 读取数据集
+X_train, y_train = load_house_data()
+X_features = ['size(sqft)', 'bedrooms', 'floors', 'age']
+
+# 数据进行归一化和标准化的类
+scaler = StandardScaler()
+
+# Z-Score 标准化
+# （1）在fit步骤中，Scaler会计算出数据集的均值和标准差。
+# （2）在transform步骤中，Scaler会对数据集中的每一个值进行归一化处理。
+X_norm = scaler.fit_transform(X_train)
+print(f"Peak to Peak range by column in Raw        X:{np.ptp(X_train, axis=0)}")
+print(f"Peak to Peak range by column in Normalized X:{np.ptp(X_norm, axis=0)}")
+
+# 随机梯度下降
+sgdr = SGDRegressor(max_iter=1000)
+sgdr.fit(X_norm, y_train)
+print(sgdr)
+print(f"number of iterations completed: {sgdr.n_iter_}, number of weight updates: {sgdr.t_}")
+
+# 获取w,b的值
+b_norm = sgdr.intercept_
+w_norm = sgdr.coef_
+print(f"model parameters:                   w: {w_norm}, b:{b_norm}")
+print(f"model parameters from previous lab: w: [110.56 -21.27 -32.71 -37.97], b: 363.16")
+
+# make a prediction using sgdr.predict()
+y_pred_sgd = sgdr.predict(X_norm)
+# make a prediction using w,b.
+y_pred = np.dot(X_norm, w_norm) + b_norm
+print(f"prediction using np.dot() and sgdr.predict match: {(y_pred == y_pred_sgd).all()}")
+print(f"Prediction on training set:\n{y_pred[:4]}")
+print(f"Target values \n{y_train[:4]}")
+```
+
+```python
+# Linear Regression, closed-form solution
+X_train, y_train = load_house_data()
+X_features = ['size(sqft)', 'bedrooms', 'floors', 'age']
+linear_model = LinearRegression()
+# X must be a 2-D Matrix
+linear_model.fit(X_train, y_train)
+b = linear_model.intercept_
+w = linear_model.coef_
+print(f"w = {w:}, b = {b:0.2f}")
+print(f"Prediction on training set:\n {linear_model.predict(X_train)[:4]}")
+print(f"prediction using w,b:\n {(X_train @ w + b)[:4]}")
+print(f"Target values \n {y_train[:4]}")
+
+x_house = np.array([1200, 3, 1, 40]).reshape(-1, 4)
+x_house_predict = linear_model.predict(x_house)[0]
+print(
+    f" predicted price of a house with 1200 sqft, 3 bedrooms, 1 floor, 40 years old = ${x_house_predict * 1000:0.2f}")
+```
+
+```python
+# 逻辑回归
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+
+
+X = np.array([[0.5, 1.5], [1, 1], [1.5, 0.5], [3, 0.5], [2, 2], [1, 2.5]])
+y = np.array([0, 0, 0, 1, 1, 1])
+lr_model = LogisticRegression()
+lr_model.fit(X, y)
+y_pred = lr_model.predict(X)
+print("Prediction on training set:", y_pred)
+print("Accuracy on training set:", lr_model.score(X, y))
+```
+
